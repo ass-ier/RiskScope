@@ -2,6 +2,7 @@ import { useApiAction } from '../lib/api'
 import { text } from '../lib/format'
 import { ErrorNotice, Icon, useNotice } from './UI'
 import type { Data } from '../types'
+import { useWorkspace } from './Workspace'
 
 export function CorrelateButton() {
   const action = useApiAction<Data>('/correlation/run')
@@ -12,5 +13,7 @@ export function CorrelateButton() {
 export function DemoButton() {
   const action = useApiAction('/demo')
   const notice = useNotice()
+  const session = useWorkspace()
+  if (session.runtime.mode === 'hosted') return <button className="button" disabled={session.busy} onClick={() => { void session.switchWorkspace('demo') }}>Open synthetic demo</button>
   return <div className="action-with-feedback"><button className="button" disabled={action.isPending} onClick={() => action.mutate({}, { onSuccess: () => notice('Synthetic ExampleCorp demo is ready. Its advisory records are examples, not real-world vulnerability claims.') })}>{action.isPending ? 'Loading synthetic demo…' : 'Load synthetic demo'}</button><p className="field-help">First load requires an empty inventory. Existing records are never overwritten.</p><ErrorNotice error={action.error} /></div>
 }

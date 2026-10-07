@@ -722,6 +722,19 @@ def import_data(
             raise ValueError("Vulnerability feed exceeds the record-count limit")
     else:
         rows = _inventory_rows(kind, data, filename)
+    record_limit = db.info.get("max_import_records")
+    if record_limit is not None:
+        count = len(parsed[2]) if kind == "sbom" else len(rows)
+        if count > record_limit or (kind == "sbom" and len(parsed[3]) > record_limit * 5):
+            raise ValueError(
+                f"Temporary workspaces allow {record_limit} records/components and "
+                f"{record_limit * 5} SBOM edges per import. Use local mode for larger inventories."
+            )
+        if kind == "vulnerabilities" and sum(
+            len(row["affected_ranges"]) for row in rows
+            if isinstance(row, dict) and isinstance(row.get("affected_ranges"), list)
+        ) > record_limit * 5:
+            raise ValueError(f"Temporary workspaces allow {record_limit * 5} affected-version ranges per import")
     job = m.ImportJob(kind=kind, filename=filename, digest=sha256(data).hexdigest())
     db.add(job)
     db.flush()

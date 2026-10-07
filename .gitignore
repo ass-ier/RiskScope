@@ -15,3 +15,7 @@ test-results/
 .DS_Store
 .local/
 .impeccable/hook.cache.json
+.env
+.env.local
+.env.*.local
+.vercel/

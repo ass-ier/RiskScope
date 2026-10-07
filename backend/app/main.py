@@ -1,5 +1,7 @@
 import os
 import json
+import logging
+import sqlite3
 from contextlib import asynccontextmanager
 from html import escape
 from pathlib import Path
@@ -12,55 +14,101 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError, create_model
 from sqlalchemy import String, func, or_, select, true
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
-from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app import models as m
+from app.core.config import RuntimeConfig
 from app.db import Base, engine, get_db
 from app.schemas import (
     READ_DTOS, RESOURCES, AcceptInput, Decision, Input, Page, ReportInput, ReportSummary, RiskCreate,
-    SettingsInput, VerifyInput, serialize,
+    GuestCreated, GuestInfo, RuntimeInfo, SettingsInput, VerifyInput, WorkspaceReset, serialize,
 )
 from app.services import reporting, workflows
 from app.services.common import audit, evidence, overdue_risk_query
+from app.services.guests import GuestWorkspaces
 
 
 @asynccontextmanager
-async def lifespan(_):
-    with engine.connect() as connection:
-        from sqlalchemy import inspect
-        if "alembic_version" not in inspect(connection).get_table_names():
-            raise RuntimeError("Database not migrated. Run: cd backend && ../.venv/bin/alembic upgrade head")
-    yield
+async def lifespan(application):
+    application.state.runtime = RuntimeConfig.from_env()
+    if application.state.runtime.mode == "hosted":
+        application.state.guests = GuestWorkspaces(application.state.runtime)
+    else:
+        with engine.connect() as connection:
+            from sqlalchemy import inspect
+            if "alembic_version" not in inspect(connection).get_table_names():
+                raise RuntimeError("Database not migrated. Run: cd backend && ../.venv/bin/alembic upgrade head")
+    try:
+        yield
+    finally:
+        if application.state.runtime.mode == "hosted":
+            application.state.guests.close()
 
 
 app = FastAPI(title="RiskScope", version="1.0.0", lifespan=lifespan, docs_url=None, redoc_url=None)
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]", "testserver"])
 DB = Annotated[Session, Depends(get_db)]
+logger = logging.getLogger(__name__)
 
 
 @app.middleware("http")
 async def local_request_safety(request: Request, call_next):
+    config = request.app.state.runtime
+    origin = request.headers.get("origin", "")
+    allowed_origin = bool(origin and config.accepts_origin(origin))
+
+    def finish(response):
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; frame-ancestors 'none'"
+        )
+        if request.url.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-store"
+        if config.mode == "hosted" and hasattr(request.state, "guest"):
+            remaining = request.app.state.guests.describe(request.state.guest)["remaining_seconds"]
+            response.headers["X-RiskScope-Session-TTL"] = str(remaining)
+        if allowed_origin:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Expose-Headers"] = "Content-Disposition, Retry-After, X-RiskScope-Session-TTL"
+            response.headers["Vary"] = "Origin"
+        return response
+
+    try:
+        host = urlsplit(f"http://{request.headers.get('host', '')}")
+        host_valid = host.hostname in config.allowed_hosts and not host.username and not host.path
+    except ValueError:
+        host_valid = False
+    if not host_valid:
+        return finish(JSONResponse({"detail": "Unrecognized API hostname"}, status_code=400))
+    if origin and not allowed_origin:
+        return finish(JSONResponse({"detail": "This browser origin is not allowed"}, status_code=403))
+    if request.method == "OPTIONS":
+        method = request.headers.get("access-control-request-method", "")
+        headers = {value.strip().lower() for value in request.headers.get("access-control-request-headers", "").split(",") if value.strip()}
+        if not allowed_origin or method not in ("GET", "POST", "PATCH", "PUT", "DELETE", "HEAD") or not headers.issubset(
+            {"authorization", "content-type", "x-riskscope-workspace"}
+        ):
+            return finish(JSONResponse({"detail": "Invalid CORS preflight"}, status_code=403))
+        return finish(Response(status_code=204, headers={
+            "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, HEAD",
+            "Access-Control-Allow-Headers": "Authorization, Content-Type, X-RiskScope-Workspace",
+            "Access-Control-Max-Age": "600",
+        }))
     if request.method in ("POST", "PATCH", "PUT", "DELETE"):
-        origin = request.headers.get("origin")
-        if origin and urlsplit(origin).hostname not in ("127.0.0.1", "localhost", "::1"):
-            return JSONResponse({"detail": "Only loopback browser origins are allowed"}, status_code=403)
-        limit = 11 * 1024 * 1024 if request.url.path.startswith("/api/imports/") else 2 * 1024 * 1024
+        if config.mode == "hosted" and not allowed_origin:
+            return finish(JSONResponse({"detail": "Hosted mutations require an allowed browser Origin"}, status_code=403))
+        upload_limit = config.guest_upload_bytes if config.mode == "hosted" else 10 * 1024 * 1024
+        limit = upload_limit + 128 * 1024 if request.url.path.startswith("/api/imports/") else 2 * 1024 * 1024
         body = bytearray()
         async for chunk in request.stream():
+            if len(body) + len(chunk) > limit:
+                return finish(JSONResponse({"detail": "Request exceeds this workspace's upload limit"}, status_code=413))
             body.extend(chunk)
-            if len(body) > limit:
-                return JSONResponse({"detail": "Request exceeds the local upload limit"}, status_code=413)
         request._body = bytes(body)
     response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["Referrer-Policy"] = "no-referrer"
-    response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; frame-ancestors 'none'"
-    )
-    return response
+    return finish(response)
 
 
 @app.exception_handler(IntegrityError)
@@ -69,6 +117,22 @@ async def invalid_relationship(_, exc):
         status_code=409,
         content={"detail": "A duplicate record or invalid relationship conflicts with existing data"},
     )
+
+
+@app.exception_handler(OperationalError)
+async def database_failure(request: Request, exc):
+    code = getattr(exc.orig, "sqlite_errorcode", None)
+    if code == sqlite3.SQLITE_FULL:
+        if request.app.state.runtime.mode == "local":
+            return JSONResponse(status_code=507, content={"detail": "The local database or disk is full. Free storage space before retrying."})
+        return JSONResponse(status_code=507, content={
+            "detail": "This temporary workspace reached its storage limit. Export your data, then reset it or use local mode."
+        })
+    if code in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):
+        return JSONResponse(status_code=503, content={"detail": "The workspace is busy. Please retry."},
+                            headers={"Retry-After": "2"})
+    logger.error("Database operation failed (SQLite code %s)", code)
+    return JSONResponse(status_code=500, content={"detail": "Database operation failed. Please retry or contact the operator."})
 
 
 def domain():
@@ -89,9 +153,72 @@ def persist(db, recalculate=False):
 
 
 @app.get("/api/health")
-def health(db: DB):
-    db.execute(select(1))
-    return {"status": "ok", "mode": "offline", "version": "1.0.0"}
+def health(request: Request):
+    return {"status": "ok", "mode": request.app.state.runtime.mode, "version": "1.0.0"}
+
+
+@app.get("/api/runtime", response_model=RuntimeInfo)
+def runtime(request: Request):
+    config = request.app.state.runtime
+    return RuntimeInfo(
+        mode=config.mode,
+        max_upload_bytes=config.guest_upload_bytes if config.mode == "hosted" else 10 * 1024 * 1024,
+        idle_seconds=config.guest_idle_seconds if config.mode == "hosted" else None,
+        maximum_lifetime_seconds=config.guest_lifetime_seconds if config.mode == "hosted" else None,
+        workspace_bytes=config.guest_workspace_bytes if config.mode == "hosted" else None,
+        max_correlations=config.guest_max_correlations if config.mode == "hosted" else None,
+    )
+
+
+def guest_manager(request):
+    if request.app.state.runtime.mode != "hosted":
+        raise HTTPException(404, "Temporary sessions are only available in hosted mode")
+    return request.app.state.guests
+
+
+@app.post("/api/session", response_model=GuestCreated)
+def new_guest(request: Request):
+    return guest_manager(request).create()
+
+
+@app.get("/api/session", response_model=GuestInfo)
+def guest_info(request: Request):
+    manager = guest_manager(request)
+    return manager.describe(manager.identify(request))
+
+
+@app.delete("/api/session", status_code=204)
+def end_guest(request: Request):
+    guest_manager(request).end(request)
+    return Response(status_code=204)
+
+
+@app.post("/api/session/reset", response_model=GuestInfo)
+def reset_guest(payload: WorkspaceReset, request: Request):
+    return guest_manager(request).reset(request, payload.workspace)
+
+
+EXAMPLES = {
+    "examplecorp-assets.json": ("assets", "Synthetic asset inventory"),
+    "examplecorp-software.csv": ("software", "Synthetic software inventory"),
+    "examplecorp-vulnerabilities.json": ("vulnerabilities", "Synthetic advisory feed"),
+    "examplecorp-cyclonedx.json": ("sbom", "CycloneDX JSON sample"),
+    "examplecorp-cyclonedx.xml": ("sbom", "CycloneDX XML sample"),
+    "examplecorp-spdx.json": ("sbom", "SPDX JSON sample"),
+}
+
+
+@app.get("/api/examples")
+def examples():
+    return [{"filename": name, "kind": kind, "label": label, "synthetic": True}
+            for name, (kind, label) in EXAMPLES.items()]
+
+
+@app.get("/api/examples/{filename}")
+def example_file(filename: str):
+    if filename not in EXAMPLES:
+        raise HTTPException(404, "Example file not found")
+    return FileResponse(Path(__file__).resolve().parents[2] / "fixtures" / filename, filename=filename)
 
 
 @app.get("/api/meta")
@@ -116,7 +243,9 @@ def correlate(db: DB):
 
 
 @app.post("/api/demo")
-def demo(db: DB):
+def demo(request: Request, db: DB):
+    if request.app.state.runtime.mode == "hosted" and request.headers.get("x-riskscope-workspace", "demo") != "demo":
+        raise HTTPException(409, "Open the separate synthetic demo workspace; your uploads workspace is not seeded.")
     from app.services.imports import demo
     try:
         result = demo(db)
@@ -148,13 +277,17 @@ def update_settings(payload: SettingsInput, db: DB):
 @app.post("/api/imports/{kind}")
 async def import_file(
     kind: Literal["assets", "software", "vulnerabilities", "sbom", "relationships"],
-    db: DB, file: UploadFile = File(), asset_id: int | None = Form(default=None),
+    request: Request, db: DB, file: UploadFile = File(), asset_id: int | None = Form(default=None),
 ):
     from app.services.imports import MAX_UPLOAD_BYTES, import_data
-    data = await file.read(MAX_UPLOAD_BYTES + 1)
+    config = request.app.state.runtime
+    limit = min(MAX_UPLOAD_BYTES, config.guest_upload_bytes) if config.mode == "hosted" else MAX_UPLOAD_BYTES
+    if config.mode == "hosted" and request.headers.get("x-riskscope-workspace", "demo") != "uploads":
+        raise HTTPException(409, "Switch to My uploads before importing. Synthetic demo data is kept separate.")
+    data = await file.read(limit + 1)
     await file.close()
-    if len(data) > MAX_UPLOAD_BYTES:
-        raise HTTPException(413, "File exceeds 10 MiB limit")
+    if len(data) > limit:
+        raise HTTPException(413, f"File exceeds this workspace's {limit // (1024 * 1024)} MiB limit")
     try:
         result = import_data(db, kind, data, file.filename or "import", asset_id=asset_id)
     except ValueError as exc:
@@ -799,6 +932,14 @@ frontend = Path(os.environ.get(
 ))
 if (frontend / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=frontend / "assets"), name="frontend-assets")
+
+
+@app.get("/favicon.svg", include_in_schema=False)
+def favicon():
+    path = frontend / "favicon.svg"
+    if not path.is_file():
+        raise HTTPException(404, "Frontend icon is not built")
+    return FileResponse(path, media_type="image/svg+xml")
 
 
 @app.get("/{path:path}", include_in_schema=False)

@@ -20,11 +20,13 @@ Observations, deterministic automated assessments and attributed analyst judgmen
 
 ## Operating Context
 
-A local browser workstation with SQLite persistence, offline feeds and synthetic ExampleCorp fixtures. No scanning, exploitation, patch deployment, cloud service or LLM dependency.
+A local browser workstation with SQLite persistence, offline feeds and synthetic ExampleCorp fixtures. An optional hosted mode uses Vercel for the frontend and Render for the API. No scanning, exploitation, patch deployment or LLM dependency.
 
 ## Capabilities and Constraints
 
-The authoritative implementation brief is preserved in `docs/implementation-specification.txt`. All 81 sections apply. Unknown intelligence remains unknown. Synthetic advisories are not factual claims about any real product. External integrations are optional and disabled.
+The authoritative implementation brief is preserved in `docs/implementation-specification.txt`. Unknown intelligence remains unknown. Synthetic advisories are not factual claims about any real product. Live intelligence integrations are optional and disabled.
+
+The user subsequently requested Vercel/Render deployment readiness, all synthetic test data, and anonymous temporary uploads without sign-in. Hosted sessions have separate synthetic-demo and upload workspaces; users must be explicitly informed of server processing, expiry, lack of backups and early loss on server sleep/restart. Local mode remains persistent.
 
 ## Brand Commitments
 
@@ -47,4 +49,4 @@ Keyboard-operable, labeled controls, visible focus, responsive layouts and expli
 
 ## Implementation Assumptions
 
-The user explicitly authorized proceeding autonomously. The first implementation uses an English-language, single-user, loopback-only web workstation and a restrained evidence-led interface. Authentication and multi-user hosting are outside this local execution scope.
+The first implementation uses an English-language, single-user, loopback-only web workstation and a restrained evidence-led interface. Hosted mode remains an anonymous, bounded demonstration/testing service, not durable multi-tenant storage. User sign-in is explicitly excluded.

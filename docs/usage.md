@@ -4,6 +4,8 @@
 
 Run `bash scripts/setup.sh`, then `bash scripts/run.sh`. The terminal prints a loopback URL. Nothing is seeded automatically. Import local CSV/JSON assets, software and advisory snapshots from Imports, or enter records through the corresponding data page.
 
+In hosted mode, the app opens a temporary copy of the synthetic demo automatically. Use the visible Workspace selector to switch to **My uploads**; the two datasets are separate. Uploads require acknowledgement of temporary server processing. Download reports before the session expires, the server sleeps/restarts, or you reset/end it. There is no sign-in or recovery account. [Hosted details](deployment.md).
+
 Every import shows processed, imported, skipped and rejected counts. Inspect rejected rows and download the error CSV. Imported filenames are labels, never paths written by the server. Correct the file and import again; identical records do not multiply.
 
 ## ExampleCorp

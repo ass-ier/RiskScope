@@ -11,7 +11,7 @@ describe('persistent analyst interactions', () => {
   it('creates an asset through the validated schema with change attribution', async () => {
     const fetch = mockApi()
     renderPage('/assets')
-    await userEvent.click(screen.getByRole('button', { name: 'Add asset' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Add asset' }))
     await userEvent.type(await screen.findByRole('textbox', { name: /Hostname/ }), 'NEW-ASSET')
     await userEvent.type(screen.getByRole('textbox', { name: /Reason/ }), 'Inventory verified by infrastructure team')
     await userEvent.click(screen.getByRole('button', { name: 'Create asset' }))
@@ -26,7 +26,7 @@ describe('persistent analyst interactions', () => {
   it('keeps an unsuccessful editor open and displays field validation', async () => {
     mockApi((url, init) => url.pathname === '/api/assets' && init?.method === 'POST' ? response({ detail: 'Hostname already exists' }, 409) : undefined)
     renderPage('/assets')
-    await userEvent.click(screen.getByRole('button', { name: 'Add asset' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Add asset' }))
     await userEvent.type(await screen.findByRole('textbox', { name: /Hostname/ }), 'WEB-01')
     await userEvent.type(screen.getByRole('textbox', { name: /Reason/ }), 'Retried inventory')
     await userEvent.click(screen.getByRole('button', { name: 'Create asset' }))
@@ -80,7 +80,7 @@ describe('persistent analyst interactions', () => {
   it('uploads multipart evidence and shows all import counts and warnings', async () => {
     const fetch = mockApi((url, init) => url.pathname === '/api/imports/assets' && init?.method === 'POST' ? response({ id: 7, filename: 'inventory.csv', processed: 4, imported: 2, skipped: 1, rejected: 1, status: 'COMPLETED', warnings: ['One duplicate hostname was skipped.'] }) : undefined)
     renderPage('/imports')
-    await userEvent.upload(screen.getByLabelText('Local file *'), new File(['hostname\nWEB-01'], 'inventory.csv', { type: 'text/csv' }))
+    await userEvent.upload(await screen.findByLabelText('Local file *'), new File(['hostname\nWEB-01'], 'inventory.csv', { type: 'text/csv' }))
     expect((screen.getByLabelText('Local file *') as HTMLInputElement).files).toHaveLength(1)
     // JSDOM does not update native file-input constraint validity after a simulated upload.
     fireEvent.submit(screen.getByRole('button', { name: 'Validate & import file' }).closest('form')!)
@@ -89,7 +89,7 @@ describe('persistent analyst interactions', () => {
     expect(screen.getByRole('link', { name: 'Download row error report (CSV)' })).toHaveAttribute('href', '/api/imports/7/errors.csv')
     const call = fetch.mock.calls.find(([url]) => String(url) === '/api/imports/assets')
     expect(call?.[1]?.body).toBeInstanceOf(FormData)
-    expect(call?.[1]?.headers).toEqual({})
+    expect(new Headers(call?.[1]?.headers).has('Content-Type')).toBe(false)
   })
 
   it('selects risks and uses the comparison API route', async () => {

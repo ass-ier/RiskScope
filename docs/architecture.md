@@ -2,6 +2,16 @@
 
 RiskScope is a single-user, loopback-only analyst workstation. The FastAPI process serves the built React application and a typed `/api` contract. SQLite is the only required datastore. No code path needs an LLM, cloud service, vulnerability scanner, or remotely executed command.
 
+This describes the persistent **local mode**. Optional **hosted mode** places the frontend on Vercel and the API on Render, with anonymous, isolated temporary workspaces rather than a shared local database. See [deployment.md](deployment.md) for its separate lifecycle and limitations.
+
+## Hosted session boundary
+
+`core/config.py` validates mode, exact frontend origins and resource bounds. `services/guests.py` creates migrated empty/demo templates, clones separate databases for each guest's demo/uploads workspace, issues a random bearer capability, enforces leases/limits, and removes expired/reset workspaces. Tokens are hashed in the server registry and held in browser session storage, not cookies or URLs.
+
+The existing `get_db` dependency chooses the authenticated guest database in hosted mode. Every inventory, risk, evidence, graph, import, report and workflow endpoint therefore uses the same isolation boundary; no client-supplied database filename is accepted. Local mode still uses its configured persistent SQLite database.
+
+The frontend bootstraps runtime/session state before rendering data, clears caches on workspace/session changes, and authenticates blob downloads. Hosted mutation origins are exact allowlist matches; CORS does not use wildcard origins or credentials. SQLite page quotas and correlation/import bounds protect the anonymous worker. Hosted mode requires a single process and is not durable multi-user storage.
+
 ## Boundaries
 
 - `app/models`: indexed relational entities and foreign keys.

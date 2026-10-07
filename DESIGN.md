@@ -145,3 +145,9 @@ Controls use 4px corners, buttons 5px, work surfaces 6px. Fine borders and modes
 - Do not replace contextual evidence with dashboard ornament, marketing copy or security guarantees.
 - Do not make irreversible or verification decisions through generic status dropdowns.
 - Keep large inventory queries paginated; do not preload every foreign-key record into a selector.
+
+## Hosted temporary-session surfaces
+
+Hosted mode preserves the workbench but adds a neutral, full-width session banner before route content. It states server processing, lack of sign-in, inactivity/maximum lifetime and earlier loss on sleep/restart. The workspace selector separates synthetic examples from personal uploads; reset/end controls name their destructive scope.
+
+Uploads repeat the temporary-storage warning next to a required acknowledgement. The sample-download list exposes every bundled test format. Expiry replaces domain content with a clear no-recovery state and explicit new-session actions; it never silently presents fresh demo data as recovered uploads. Mobile layouts stack the session controls above the work surface without document overflow.

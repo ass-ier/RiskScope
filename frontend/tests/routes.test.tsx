@@ -66,7 +66,7 @@ describe('workstation route coverage', () => {
 
   it('opens responsive navigation and closes it with Escape', async () => {
     renderPage('/assets')
-    const menu = screen.getByRole('button', { name: 'Open navigation' })
+    const menu = await screen.findByRole('button', { name: 'Open navigation' })
     await userEvent.click(menu)
     expect(screen.getByRole('button', { name: 'Close navigation', expanded: true })).toBeInTheDocument()
     await userEvent.keyboard('{Escape}')

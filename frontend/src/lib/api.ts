@@ -1,6 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Data, Metadata, Page, Params, Values } from '../types'
 
+export const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+export type WorkspaceName = 'demo' | 'uploads'
+let sessionToken: string | null = null
+let workspace: WorkspaceName = 'demo'
+
+export function configureSession(token: string | null, selected: WorkspaceName = 'demo') {
+  sessionToken = token
+  workspace = selected
+}
+
+export function apiUrl(path: string) {
+  return `${apiBase}/api${path}`
+}
+
 export class ApiError extends Error {
   status: number
   constructor(message: string, status: number) {
@@ -30,26 +44,44 @@ function errorText(value: unknown): string {
   return 'The request could not be completed.'
 }
 
-export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function apiResponse(path: string, options: RequestInit = {}): Promise<Response> {
   let response: Response
+  const requestToken = sessionToken
+  const headers = new Headers(options.headers)
+  if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
+  if (requestToken) {
+    headers.set('Authorization', `Bearer ${requestToken}`)
+    headers.set('X-RiskScope-Workspace', workspace)
+  }
   try {
-    response = await fetch(`/api${path}`, {
-      ...options,
-      headers: {
-        ...(options.body && !(options.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
-        ...options.headers,
-      },
-    })
+    response = await fetch(apiUrl(path), { ...options, headers, credentials: 'omit', cache: 'no-store' })
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') throw error
-    throw new ApiError('Cannot reach the local API. Start the RiskScope backend and try again.', 0)
+    throw new ApiError('Cannot reach the RiskScope API. Start the local backend, or wait for the hosted service to wake up, then retry.', 0)
   }
   if (!response.ok) {
     const body = await response.json().catch(() => null)
-    throw new ApiError(body ? errorText(body) : `Request failed (${response.status}). Please try again.`, response.status)
+    const message = body ? errorText(body) : `Request failed (${response.status}). Please try again.`
+    if (requestToken && requestToken === sessionToken && (response.status === 401 || response.status === 410)) {
+      window.dispatchEvent(new CustomEvent('riskscope:session-expired', { detail: message }))
+    }
+    throw new ApiError(message, response.status)
   }
+  const ttl = response.headers.get('X-RiskScope-Session-TTL')
+  if (requestToken && requestToken === sessionToken && ttl !== null && Number.isFinite(Number(ttl))) {
+    window.dispatchEvent(new CustomEvent('riskscope:session-activity', { detail: Number(ttl) }))
+  }
+  return response
+}
+
+export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const response = await apiResponse(path, options)
   if (response.status === 204) return undefined as T
-  return response.json() as Promise<T>
+  try {
+    return await response.json() as T
+  } catch {
+    throw new ApiError('The API did not return JSON. The hosted service may be waking up; wait and retry.', response.status)
+  }
 }
 
 export function useResource<T = Data>(resource: string, id: string | number | undefined | null) {

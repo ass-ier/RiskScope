@@ -300,6 +300,29 @@ class ReportSummary(BaseModel):
     updated_at: str
 
 
+class RuntimeInfo(BaseModel):
+    mode: Literal["local", "hosted"]
+    max_upload_bytes: int
+    idle_seconds: int | None = None
+    maximum_lifetime_seconds: int | None = None
+    workspace_bytes: int | None = None
+    max_correlations: int | None = None
+
+
+class GuestInfo(BaseModel):
+    expires_at: str
+    maximum_expires_at: str
+    remaining_seconds: int
+
+
+class GuestCreated(GuestInfo):
+    token: str
+
+
+class WorkspaceReset(Input):
+    workspace: Literal["demo", "uploads"]
+
+
 class Weights(Input):
     cvss: float = Field(default=3, ge=0, le=10)
     known_exploitation: float = Field(default=18, ge=0, le=30)

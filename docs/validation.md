@@ -108,3 +108,17 @@ The first demo load now refuses a nonempty inventory, so fixture data cannot ove
 ## Deliberate optional boundaries
 
 CycloneDX XML is implemented with safe parsing. Live NVD, OSV, CISA KEV and vendor network adapters are **not implemented or silently enabled**; provider interfaces and local cache metadata are present. Multi-user hosting/authentication, scanning, exploit execution and patch deployment are not part of this loopback-only workstation.
+
+## Hosted-deployment follow-up
+
+The later deployment request adds anonymous temporary hosted sessions, not account-based persistent hosting. Deployment instructions and limits are in [deployment.md](deployment.md).
+
+The combined backend suite now passes **142 tests**; the frontend suite passes **60 tests**, with TypeScript, ESLint and production builds passing. Hosted coverage includes separate guest databases, demo/upload separation, capability-protected exports, exact-origin CORS, expiry/file cleanup, reset/end/restart invalidation, storage/import/correlation bounds, and refusal to publish unauthenticated local mode on Render. Frontend tests cover temporary-data acknowledgement, session restoration/expiration, cache clearing, authenticated downloads and stale-response isolation.
+
+Root `render.yaml` and `vercel.json` were validated locally against their official published JSON schemas. A Vercel-mode production build was exercised with a validation-only Render origin. No cloud deployment or publication was performed.
+
+Real browser verification used separate loopback frontend/API origins. A CSV upload appeared only in its owning guest session, not another session or the nine-asset synthetic demo. Authenticated PDF/JSON report downloads contained only that guest's data. The SPDX fixture downloaded successfully. Reset/end controls were exercised, and a real API restart invalidated the previous session with an explicit no-recovery screen; starting a new demo restored only the synthetic template.
+
+Desktop/mobile temporary-storage banners and upload acknowledgement were visually checked. The mobile document remained 390 pixels wide and navigation worked. The first mobile screenshot caught a resize transition; the settled confirmation showed the sidebar correctly off-screen. A missing favicon was fixed. The deliberate restart test generated an expected HTTP 410; no unhandled application error was observed. Mechanical inspection of the changed UI returned no findings.
+
+The original detached local preview and its persistent databases were left unchanged. Hosted checks used separate temporary API workspaces and `.local/hosted-build`, not the existing `frontend/dist`.

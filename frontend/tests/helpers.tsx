@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { vi } from 'vitest'
 import type { Data, Metadata, Values } from '../src/types'
 import App from '../src/App'
+import { WorkspaceProvider } from '../src/components/Workspace'
 
 export const asset: Data = {
   id: 1, hostname: 'WEB-01', ip: '10.0.1.10', environment: 'PRODUCTION', criticality: 'CRITICAL',
@@ -71,6 +72,8 @@ export function mockApi(handler?: (url: URL, init?: RequestInit) => Response | u
     if (custom) return custom
     const parts = url.pathname.replace('/api/', '').split('/')
     const [resource, id] = parts
+    if (resource === 'runtime') return response({ mode: 'local', max_upload_bytes: 10 * 1024 * 1024 })
+    if (resource === 'examples') return response([])
     if (resource === 'meta') return response(metadata)
     if (resource === 'dashboard') return response(dashboard)
     if (resource === 'settings') return response(settings)
@@ -95,5 +98,5 @@ export function mockApi(handler?: (url: URL, init?: RequestInit) => Response | u
 
 export function renderPage(path = '/', element?: ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity }, mutations: { retry: false } } })
-  return { client, ...render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]}>{element || <App />}</MemoryRouter></QueryClientProvider>) }
+  return { client, ...render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]}>{element ? <WorkspaceProvider>{element}</WorkspaceProvider> : <App />}</MemoryRouter></QueryClientProvider>) }
 }

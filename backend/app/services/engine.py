@@ -937,6 +937,11 @@ def correlate(db: Session) -> dict:
     context = Context(db)
     pending, candidates, created, matched, verified = [], [], 0, 0, 0
     evaluated_keys = set()
+    evaluated_ranges = 0
+    maximum = db.info.get("max_correlations")
+    if maximum is not None and sum(map(len, (context.assets, context.installations, context.vulnerabilities))) > maximum:
+        from fastapi import HTTPException
+        raise HTTPException(413, f"Temporary workspaces allow {maximum} total asset, installation and advisory records. Use local mode for larger inventories.")
     for installation in context.installations.values():
         asset = context.assets.get(installation.asset_id)
         software = context.software.get(installation.software_id)
@@ -947,10 +952,20 @@ def correlate(db: Session) -> dict:
             if rule.vulnerability_id in context.vulnerabilities:
                 candidate_groups[rule.vulnerability_id].append(rule)
         for vulnerability_id, ranges in candidate_groups.items():
+            evaluated_ranges += len(ranges)
+            if maximum is not None and evaluated_ranges > maximum:
+                from fastapi import HTTPException
+                raise HTTPException(413, f"Temporary workspaces allow {maximum} version-range checks per run. Use local mode for larger datasets.")
             result = _range_result(installation, software, ranges)
             if result is None:
                 continue
             evaluated_keys.add((installation.id, vulnerability_id))
+            if maximum is not None and len(evaluated_keys) > maximum:
+                from fastapi import HTTPException
+                raise HTTPException(
+                    413, f"Temporary workspaces support {maximum} applicability checks per run. "
+                    "Use local mode for larger datasets; this calculation was rolled back."
+                )
             candidates.append((installation, vulnerability_id, result))
             if len(candidates) >= WRITE_BATCH_SIZE:
                 batch_pending, batch_created, batch_matched, batch_verified = _correlate_candidates(context, candidates)

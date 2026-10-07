@@ -5,6 +5,7 @@ import { foreignResources, resources } from '../lib/resources'
 import type { Data, Schema, Values } from '../types'
 import { ErrorNotice, Skeleton, useNotice } from './UI'
 import { Lookup } from './Lookup'
+import { useWorkspace } from './Workspace'
 
 export function resolvedSchema(schema: Schema): Schema {
   return schema.anyOf ? { ...schema, ...schema.anyOf.find(option => option.type !== 'null') } : schema
@@ -76,8 +77,9 @@ export function ResourceEditor({ resource, initial, presets = {}, onDone, onCanc
 }
 
 function EditorBody({ resource, initial, presets, schema, onDone, onCancel }: { resource: string; initial?: Data; presets: Values; schema: Schema; onDone: (record: Data) => void; onCancel: () => void }) {
+  const { runtime } = useWorkspace()
   const [values, setValues] = useState(() => schemaDefaults(schema, initial, presets))
-  const [actor, setActor] = useState('Local analyst')
+  const [actor, setActor] = useState(runtime.mode === 'hosted' ? 'Guest analyst' : 'Local analyst')
   const [reason, setReason] = useState('')
   const [localError, setLocalError] = useState<Error | null>(null)
   const action = useApiAction(`/${resource}${initial ? `/${initial.id}` : ''}${queryString({ actor, reason })}`, initial ? 'PATCH' : 'POST')
@@ -95,7 +97,7 @@ function EditorBody({ resource, initial, presets, schema, onDone, onCancel }: { 
     } catch (error) { setLocalError(error instanceof Error ? error : new Error('Save failed.')) }
   }
   return <form className="editor" onSubmit={submit}>
-    <div className="editor-heading"><h3>{initial ? 'Edit' : 'New'} {resources[resource]?.singular || resource}</h3><p>Saved to your local database. Required fields are marked *.</p></div>
+    <div className="editor-heading"><h3>{initial ? 'Edit' : 'New'} {resources[resource]?.singular || resource}</h3><p>{runtime.mode === 'hosted' ? 'Saved only in this temporary server workspace.' : 'Saved to your local database.'} Required fields are marked *.</p></div>
     <div className="form-grid">{fields.filter(([key]) => !provenance.includes(key)).map(renderField)}</div>
     {fields.some(([key]) => provenance.includes(key)) && <fieldset><legend>Source & evidence</legend><div className="form-grid">{fields.filter(([key]) => provenance.includes(key)).map(renderField)}</div></fieldset>}
     {resource === 'remediation' && <p className="notice info">To accept, reject, defer or verify a risk, open the linked risk and use its dedicated analyst action. Verification requires evidence.</p>}

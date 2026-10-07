@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: riskscope-api
+    runtime: python
+    plan: free
+    numInstances: 1
+    autoDeploy: false
+    buildCommand: pip install -r backend/requirements.lock -e ./backend
+    startCommand: bash scripts/render-start.sh
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.11
+      - key: RISKSCOPE_MODE
+        value: hosted
+      - key: RISKSCOPE_ALLOWED_ORIGINS
+        sync: false
+      - key: RISKSCOPE_GUEST_IDLE_SECONDS
+        value: "3600"
+      - key: RISKSCOPE_GUEST_LIFETIME_SECONDS
+        value: "14400"
+      - key: RISKSCOPE_GUEST_MAX_SESSIONS
+        value: "12"
+      - key: RISKSCOPE_GUEST_WORKSPACE_BYTES
+        value: "33554432"
+      - key: RISKSCOPE_GUEST_UPLOAD_BYTES
+        value: "2097152"
+      - key: RISKSCOPE_GUEST_MAX_CORRELATIONS
+        value: "5000"

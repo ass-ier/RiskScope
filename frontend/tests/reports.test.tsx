@@ -14,7 +14,7 @@ describe('bounded immutable report previews', () => {
     expect(fetch).toHaveBeenCalledWith('/api/reports/1', expect.anything())
     expect(fetch).toHaveBeenCalledWith('/api/reports/1/summary', expect.anything())
     expect(fetch).toHaveBeenCalledWith('/api/reports/1/records/risk?page=1&page_size=25', expect.anything())
-    expect(fetch.mock.calls.every(([url]) => String(url).startsWith('/api/reports/1'))).toBe(true)
+    expect(fetch.mock.calls.every(([url]) => String(url) === '/api/runtime' || String(url).startsWith('/api/reports/1'))).toBe(true)
     await userEvent.click(screen.getByText('Captured assessment settings'))
     expect(screen.getByText('Known exploitation')).toBeInTheDocument()
   })

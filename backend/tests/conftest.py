@@ -23,7 +23,10 @@ def db():
 
 
 @pytest.fixture
-def client(db):
+def client(db, monkeypatch):
+    monkeypatch.setenv("RISKSCOPE_MODE", "local")
+    monkeypatch.delenv("RENDER_EXTERNAL_HOSTNAME", raising=False)
+    monkeypatch.delenv("RISKSCOPE_ALLOWED_ORIGINS", raising=False)
     def dependency():
         yield db
     app.dependency_overrides[get_db] = dependency

@@ -27,6 +27,16 @@ The database is `.local/riskscope.db`; startup upgrades it with Alembic and neve
 
 Open **Imports** to bring your own records into an empty workspace, or use the explicit **Load ExampleCorp** action for the synthetic demonstration. No provider networking is enabled. JSON and CSV imports are local files and never execute packages or scripts.
 
+## Deploy to Vercel and Render
+
+Use the included root `vercel.json` for the React frontend and `render.yaml` for the FastAPI backend. Set `VITE_API_BASE_URL` in Vercel to the actual Render HTTPS origin, and `RISKSCOPE_ALLOWED_ORIGINS` in Render to the exact Vercel frontend origin.
+
+**Hosted mode has no sign-in and no permanent storage.** Each anonymous session gets a complete synthetic ExampleCorp demo plus a separate empty **My uploads** workspace. Visitors see explicit temporary-storage warnings, can download all sample datasets, and must acknowledge server processing before uploading.
+
+Sessions expire after 60 minutes of API inactivity or four hours maximum, and may end sooner when Render sleeps/restarts. End session deletes both workspaces; reset affects only the selected one. Closing a tab does not guarantee immediate server deletion. Export results before leaving. Sensitive or large inventories belong in local mode.
+
+See **[deployment setup, environment variables and limits](docs/deployment.md)** for the complete sequence, free-plan caveats and two-origin local testing. These files prepare deployment; they do not publish or provision anything automatically.
+
 ## Analyst workflow
 
 1. Import or create assets, software and business/network context.
@@ -88,6 +98,7 @@ It creates a separate retained database with 1,000 assets, 10,000 installations,
 - [Detection rules](docs/detection-rules.md)
 - [Usage and verification](docs/usage.md)
 - [Measured acceptance results](docs/validation.md)
+- [Vercel / Render deployment](docs/deployment.md)
 - [Original 81-section specification](docs/implementation-specification.txt)
 
 ## Dependencies and boundaries

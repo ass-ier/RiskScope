@@ -2,6 +2,8 @@
 
 The React 19 / TypeScript workstation uses Vite, Tailwind CSS 4, React Router, TanStack Query, Recharts and Cytoscape.js. No external fonts, remote intelligence calls, browser-only domain database or synthetic dashboard metrics are used.
 
+Hosted mode adds a session-aware shell before any domain queries. Its visible banner states temporary server storage, inactivity/maximum lifetime and earlier loss on server sleep/restart. Demo and My uploads are separate, with explicit reset/end controls and an upload acknowledgement. Session expiration removes cached records and requires an explicit restart. Sample files and report/error exports use capability-bearing downloads rather than tokenized URLs. Local mode retains the original persistent behavior.
+
 ## Run and validate
 
 From the repository root:
