@@ -1,0 +1,10 @@
+hostname,product,vendor,version,ecosystem,lifecycle,confidence
+WEB-01,Nginx,nginx,1.24.0,generic,SUPPORTED,HIGH
+WEB-02,nginx web server,nginx,1.24.0,generic,SUPPORTED,HIGH
+WEB-01,example-auth,ExampleCorp synthetic,2.0.0,generic,SUPPORTED,HIGH
+LAPTOP-01,example-lab,ExampleCorp synthetic,1.0.0,generic,SUPPORTED,HIGH
+APP-02,example-runtime,ExampleCorp synthetic,3.8.0,generic,END_OF_LIFE,HIGH
+DB-01,example-database,ExampleCorp synthetic,4.0.0,generic,SUPPORTED,HIGH
+DB-02,example-database,ExampleCorp synthetic,4.0.0,generic,SUPPORTED,HIGH
+DC-01,example-directory,ExampleCorp synthetic,2.0.0,generic,UNKNOWN,HIGH
+FILE-01,example-fileserver,ExampleCorp synthetic,5.0.0,generic,UNKNOWN,HIGH

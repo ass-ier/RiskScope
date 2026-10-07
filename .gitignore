@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+*.egg-info/
+*.db
+*.db-shm
+*.db-wal
+node_modules/
+dist/
+playwright-report/
+.playwright-mcp/
+test-results/
+.DS_Store
+.local/
+.impeccable/hook.cache.json

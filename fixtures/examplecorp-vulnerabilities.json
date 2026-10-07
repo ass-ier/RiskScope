@@ -1,0 +1,72 @@
+{
+  "source": "SYNTHETIC ExampleCorp demonstration — not real intelligence",
+  "version": "1",
+  "vulnerabilities": [
+    {
+      "identifier": "SYNTH-EXAMPLE-001",
+      "title": "SYNTHETIC nginx applicability and prioritization example",
+      "description": "FICTIONAL DATA. This identifier, CVSS, affected range, fixed version, and exploitation metadata demonstrate the workstation only. They do not assert a real nginx vulnerability.",
+      "cvss_score": 9.8,
+      "cvss_version": "3.1",
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "known_exploited": true,
+      "exploit_available": true,
+      "exploit_maturity": "FUNCTIONAL",
+      "attack_complexity": "LOW",
+      "privileges_required": "NONE",
+      "user_interaction": "NONE",
+      "recommendation": "SYNTHETIC demo recommendation: update the inventory observation to nginx 1.26.2, then correlate and inspect the evidence-backed verification. This is not real patch guidance.",
+      "synthetic": true,
+      "confidence": "HIGH",
+      "affected_ranges": [{"product":"nginx","vendor":"nginx","ecosystem":"generic","version_scheme":"generic","affected":">=1.20,<1.26.2","fixed_versions":["1.26.2"]}],
+      "references": []
+    },
+    {
+      "identifier": "SYNTH-EXPOSED-075",
+      "title": "SYNTHETIC lower-CVSS known-exploited exposed application",
+      "description": "FICTIONAL DATA. Lower base severity outranks the high-CVSS-only isolated laboratory example because of explicit asset context and synthetic global exploitation intelligence.",
+      "cvss_score": 7.5,
+      "cvss_version": "3.1",
+      "known_exploited": true,
+      "exploit_available": null,
+      "exploit_maturity": "UNKNOWN",
+      "attack_complexity": "LOW",
+      "privileges_required": "NONE",
+      "user_interaction": "NONE",
+      "recommendation": "SYNTHETIC recommendation: upgrade example-auth to the source-listed 2.1.0 after testing.",
+      "synthetic": true,
+      "confidence": "HIGH",
+      "affected_ranges": [{"product":"example-auth","vendor":"ExampleCorp synthetic","ecosystem":"generic","version_scheme":"generic","affected":">=2.0,<2.1","fixed_versions":["2.1.0"]}],
+      "references": []
+    },
+    {
+      "identifier": "SYNTH-LAB-098",
+      "title": "SYNTHETIC high-CVSS isolated laboratory example",
+      "description": "FICTIONAL DATA. Source explicitly reports no known exploitation or public exploit in this synthetic snapshot. This is not a claim that exploitation is impossible.",
+      "cvss_score": 9.8,
+      "known_exploited": false,
+      "exploit_available": false,
+      "attack_complexity": "LOW",
+      "privileges_required": "NONE",
+      "user_interaction": "NONE",
+      "recommendation": "SYNTHETIC recommendation: upgrade example-lab to source-listed 1.1.0.",
+      "synthetic": true,
+      "confidence": "HIGH",
+      "affected_ranges": [{"product":"example-lab","vendor":"ExampleCorp synthetic","ecosystem":"generic","version_scheme":"generic","affected":"<1.1","fixed_versions":["1.1.0"]}],
+      "references": []
+    },
+    {
+      "identifier": "SYNTH-TRANSITIVE-001",
+      "title": "SYNTHETIC transitive dependency review example",
+      "description": "FICTIONAL DATA. Component presence establishes applicability, not service reachability or exploitability.",
+      "cvss_score": 6.0,
+      "known_exploited": null,
+      "exploit_available": null,
+      "recommendation": "SYNTHETIC recommendation: review the dependency tree and upgrade demo-parser to source-listed 2.0.0.",
+      "synthetic": true,
+      "confidence": "HIGH",
+      "affected_ranges": [{"product":"demo-parser","vendor":"ExampleCorp synthetic","ecosystem":"npm","version_scheme":"semver","affected":">=1.0.0,<2.0.0","fixed_versions":["2.0.0"]}],
+      "references": []
+    }
+  ]
+}

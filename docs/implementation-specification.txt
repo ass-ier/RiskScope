@@ -1,0 +1,2476 @@
+Yes. RiskScope is a better name because it lets us build something broader than a CVE scanner: an asset-aware vulnerability exposure and risk prioritization workstation.
+
+It also fits your portfolio nicely:
+
+SentinelFlow → ReverseScope → PacketScope → WebScope → RiskScope
+
+Here is the full implementation prompt.
+
+RiskScope — Asset-Aware Vulnerability Exposure & Risk Prioritization Workstation
+
+You are implementing RiskScope, a local-first vulnerability exposure, asset-risk analysis, and remediation prioritization workstation for security analysts, vulnerability-management teams, infrastructure/security engineers, and incident responders.
+
+RiskScope must NOT be a simple CVE database, vulnerability scanner, patch tracker, or generic dashboard.
+
+Its core purpose is to answer:
+
+Which vulnerabilities actually matter in this environment, why do they matter, what assets are affected, how exposed are those assets, and what should be remediated first?
+
+RiskScope should correlate:
+
+Assets
+   ↓
+Software
+   ↓
+Versions
+   ↓
+Vulnerabilities
+   ↓
+Exploitability
+   ↓
+Network Exposure
+   ↓
+Asset Criticality
+   ↓
+Attack Paths
+   ↓
+Risk Prioritization
+   ↓
+Remediation
+   ↓
+Verification
+
+The product must be evidence-driven.
+
+Every important risk assessment must be explainable through its underlying data.
+
+Do not invent unexplained risk scores.
+
+⸻
+
+1. Product Identity
+
+Product name:
+
+RiskScope
+
+Subtitle:
+
+Asset-Aware Vulnerability Exposure & Risk Prioritization Workstation
+
+Short description:
+
+RiskScope correlates assets, software, vulnerabilities, exposure, exploitability, and business context to identify the vulnerabilities that represent the greatest real-world risk and prioritize remediation with evidence-backed reasoning.
+
+Primary users:
+
+* Security analysts
+* Vulnerability-management analysts
+* Security engineers
+* Infrastructure engineers
+* SOC analysts
+* IT administrators
+* Security managers
+
+⸻
+
+2. Core Product Philosophy
+
+RiskScope must follow these principles.
+
+2.1 Risk is contextual
+
+Do not assume:
+
+CVSS 9.8 = highest priority
+
+Instead evaluate:
+
+CVSS
++
+Exploitability
++
+Known Exploitation
++
+Internet Exposure
++
+Asset Criticality
++
+Business Context
++
+Privilege Impact
++
+Affected Service
++
+Attack-Path Position
+
+The system must explain why a vulnerability receives a particular priority.
+
+⸻
+
+2.2 Evidence first
+
+Every risk assessment must be traceable to evidence.
+
+For example:
+
+Risk:
+CRITICAL
+Why?
+CVSS:
+9.8
+Known exploitation:
+YES
+Internet exposure:
+YES
+Production:
+YES
+Asset criticality:
+CRITICAL
+Affected software:
+nginx 1.24.0
+Affected version:
+YES
+Evidence:
+Asset inventory #42
+Software inventory #81
+CVE record #CVE-XXXX
+Exposure observation #19
+
+⸻
+
+2.3 Separate facts from interpretation
+
+RiskScope must distinguish:
+
+Observations
+
+Facts imported or discovered from data.
+
+Automated assessment
+
+Rules and calculations performed by RiskScope.
+
+Analyst assessment
+
+Human interpretation and final decision.
+
+For example:
+
+Observation:
+WEB-01 is internet-facing.
+Automated assessment:
+CVE-XXXX has high exposure.
+Analyst conclusion:
+Prioritize remediation within 7 days because WEB-01 hosts a production authentication service.
+
+⸻
+
+3. Local-First Requirements
+
+The core application must run locally.
+
+Do NOT require:
+
+* Paid APIs
+* Cloud infrastructure
+* Cloud credits
+* LLM APIs
+* SaaS vulnerability-management platforms
+* External databases for basic functionality
+
+External intelligence should be implemented as optional adapters.
+
+RiskScope must remain functional using:
+
+* imported CSV
+* JSON
+* SBOM
+* vulnerability-feed snapshots
+* manually created assets
+* local fixture data
+
+⸻
+
+4. Recommended Technology Stack
+
+Backend
+
+Use:
+
+* Python 3.12+
+* FastAPI
+* Pydantic v2
+* SQLAlchemy
+* SQLite
+* Alembic
+* Pytest
+* pytest-asyncio
+
+Optional libraries where useful:
+
+* packaging
+* python-dateutil
+* networkx
+* httpx
+* orjson
+
+Do not add dependencies without justification.
+
+⸻
+
+Frontend
+
+Use:
+
+* React
+* TypeScript
+* Vite
+* Tailwind CSS
+* React Router
+* TanStack Query
+* Recharts
+* Cytoscape.js or React Flow
+
+Use Cytoscape.js if graph visualization becomes complex.
+
+⸻
+
+5. Repository Structure
+
+Use a clean architecture:
+
+riskscope/
+├── backend/
+│   ├── app/
+│   │   ├── api/
+│   │   ├── core/
+│   │   ├── db/
+│   │   ├── models/
+│   │   ├── schemas/
+│   │   ├── services/
+│   │   │   ├── assets/
+│   │   │   ├── inventory/
+│   │   │   ├── sbom/
+│   │   │   ├── vulnerabilities/
+│   │   │   ├── exposure/
+│   │   │   ├── exploitability/
+│   │   │   ├── risk/
+│   │   │   ├── attack_paths/
+│   │   │   ├── remediation/
+│   │   │   ├── imports/
+│   │   │   ├── exports/
+│   │   │   └── reporting/
+│   │   ├── rules/
+│   │   └── main.py
+│   │
+│   ├── tests/
+│   └── alembic/
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── features/
+│   │   ├── hooks/
+│   │   ├── lib/
+│   │   └── types/
+│   └── tests/
+│
+├── fixtures/
+│   ├── assets/
+│   ├── software/
+│   ├── vulnerabilities/
+│   ├── sbom/
+│   └── scenarios/
+│
+├── docs/
+│   ├── architecture.md
+│   ├── data-model.md
+│   ├── risk-model.md
+│   ├── import-formats.md
+│   ├── attack-paths.md
+│   ├── detection-rules.md
+│   └── usage.md
+│
+├── scripts/
+├── README.md
+└── LICENSE
+
+⸻
+
+6. Core Workflow
+
+The primary workflow should be:
+
+Import / Create Assets
+        ↓
+Import Software Inventory
+        ↓
+Import SBOM / Vulnerability Data
+        ↓
+Correlate Software ↔ Vulnerabilities
+        ↓
+Determine Exposure
+        ↓
+Determine Exploitability
+        ↓
+Evaluate Asset Criticality
+        ↓
+Build Risk Relationships
+        ↓
+Identify Attack Paths
+        ↓
+Prioritize Risks
+        ↓
+Create Remediation Tasks
+        ↓
+Verify Remediation
+        ↓
+Generate Reports
+
+⸻
+
+7. Asset Model
+
+Create a comprehensive asset model.
+
+An asset should support:
+
+Asset
+├── ID
+├── Hostname
+├── IP Address
+├── MAC Address
+├── OS
+├── OS Version
+├── Environment
+├── Owner
+├── Business Unit
+├── Location
+├── Criticality
+├── Internet Exposure
+├── Network Zone
+├── Tags
+├── Description
+├── Status
+├── Created At
+└── Updated At
+
+Environment values:
+
+PRODUCTION
+STAGING
+DEVELOPMENT
+TEST
+LAB
+UNKNOWN
+
+Criticality:
+
+CRITICAL
+HIGH
+MEDIUM
+LOW
+UNKNOWN
+
+Asset status:
+
+ACTIVE
+INACTIVE
+RETIRED
+UNKNOWN
+
+⸻
+
+8. Asset Relationships
+
+Assets must be able to relate to one another.
+
+Examples:
+
+WEB-01
+   ↓ connects_to
+APP-01
+   ↓ connects_to
+DB-01
+
+Other relationship types:
+
+HOSTS
+CONNECTS_TO
+DEPENDS_ON
+AUTHENTICATES_TO
+MANAGES
+BACKS_UP
+ROUTES_TO
+MEMBER_OF
+
+This relationship model will later support attack-path analysis.
+
+⸻
+
+9. Software Inventory
+
+Create a software inventory system.
+
+Each software installation should contain:
+
+SoftwareInstallation
+├── Asset
+├── Product
+├── Vendor
+├── Version
+├── Architecture
+├── Installation Source
+├── Package Identifier
+├── First Seen
+├── Last Seen
+└── Evidence
+
+Example:
+
+WEB-01
+nginx
+Version: 1.24.0
+Architecture: x86_64
+Environment: Production
+
+⸻
+
+10. Software Normalization
+
+Different inventories may represent the same product differently.
+
+Normalize:
+
+nginx
+Nginx
+nginx web server
+nginx/1.24
+
+into a canonical product representation where possible.
+
+Do not make aggressive assumptions.
+
+Store:
+
+Original Name
+Canonical Name
+Vendor
+Confidence
+Normalization Method
+
+⸻
+
+11. SBOM Support
+
+Support importing:
+
+CycloneDX
+
+* JSON
+* XML where practical
+
+SPDX
+
+* JSON where practical
+
+Extract:
+
+* package name
+* version
+* vendor
+* package identifier
+* dependencies
+* hashes
+* licenses
+
+Build dependency relationships.
+
+Example:
+
+Application
+   ↓
+React
+   ↓
+Dependency A
+   ↓
+Dependency B
+
+⸻
+
+12. Dependency Graph
+
+Create a dependency graph.
+
+Example:
+
+MovieApp
+│
+├── React
+│
+├── Axios
+│   └── Dependency X
+│
+└── Express
+    └── Dependency Y
+
+This allows RiskScope to identify vulnerabilities in transitive dependencies.
+
+Do not claim exploitability merely because a vulnerable package exists.
+
+⸻
+
+13. Vulnerability Model
+
+Create a vulnerability model containing:
+
+Vulnerability
+├── CVE ID
+├── Title
+├── Description
+├── CVSS Version
+├── CVSS Score
+├── CVSS Vector
+├── CWE
+├── Published Date
+├── Modified Date
+├── Affected Products
+├── Affected Versions
+├── Fixed Versions
+├── Exploit Availability
+├── Known Exploitation
+├── References
+└── Source
+
+Support vulnerability identifiers beyond CVE where practical.
+
+Examples:
+
+CVE
+GHSA
+OSV
+
+⸻
+
+14. Vulnerability Matching
+
+Build a correlation engine.
+
+Input:
+
+Asset:
+WEB-01
+Software:
+nginx
+Version:
+1.24.0
+
+Vulnerability database:
+
+CVE-XXXX
+Affected:
+nginx 1.20 - 1.25
+
+RiskScope should create:
+
+VulnerabilityExposure
+
+representing:
+
+WEB-01 is running an affected version of nginx.
+
+Store why the match occurred.
+
+Example:
+
+Match Method:
+Version Range
+Observed:
+1.24.0
+Affected Range:
+>=1.20,<1.26
+Confidence:
+HIGH
+
+⸻
+
+15. False Positive Control
+
+Do not blindly create vulnerability matches.
+
+Support:
+
+CONFIRMED
+POTENTIAL
+REJECTED
+NEEDS_REVIEW
+
+Allow analysts to explain a rejection.
+
+Example:
+
+Rejected because:
+Backported vendor patch already applied.
+
+This is important for realistic vulnerability management.
+
+⸻
+
+16. Exposure Model
+
+Create an explicit exposure model.
+
+Factors can include:
+
+Internet-facing
+Externally reachable
+Internal-only
+Restricted network
+Isolated
+Unknown
+
+Store evidence.
+
+Example:
+
+Asset:
+WEB-01
+Exposure:
+INTERNET_FACING
+Evidence:
+Network inventory import #22
+
+Do not infer internet exposure solely from an IP address.
+
+⸻
+
+17. Network Context
+
+Allow assets to have:
+
+* IP
+* subnet
+* VLAN/zone
+* gateway
+* security zone
+* reachable services
+* known connections
+
+Example:
+
+Internet
+   ↓
+DMZ
+   ↓
+WEB-01
+   ↓
+APP-01
+   ↓
+DB-01
+
+⸻
+
+18. Service Model
+
+Create services running on assets.
+
+Example:
+
+Service
+├── Asset
+├── Name
+├── Port
+├── Protocol
+├── Version
+├── Exposure
+├── Status
+└── Evidence
+
+Example:
+
+WEB-01
+TCP/443
+HTTPS
+nginx
+Internet-facing
+
+This allows vulnerabilities to be associated with actual exposed services rather than just installed software.
+
+⸻
+
+19. Exploitability Model
+
+Create an exploitability assessment.
+
+Factors:
+
+Public Exploit Available
+Known Exploitation
+Exploit Maturity
+Attack Complexity
+Privileges Required
+User Interaction
+Network Reachability
+
+Do not invent exploit information.
+
+If no evidence exists:
+
+UNKNOWN
+
+not:
+
+NO
+
+⸻
+
+20. Known Exploitation
+
+Support a separate flag:
+
+KNOWN_EXPLOITED
+EXPLOIT_AVAILABLE
+NO_KNOWN_EXPLOIT
+UNKNOWN
+
+These must not be treated as identical.
+
+For example:
+
+Known exploited:
+YES
+Public exploit:
+UNKNOWN
+
+is valid.
+
+⸻
+
+21. Risk Engine
+
+The risk engine is the centerpiece of RiskScope.
+
+Do not simply calculate:
+
+Risk = CVSS
+
+Instead calculate a transparent priority based on multiple factors.
+
+Potential factors:
+
+CVSS severity
++
+Exploit availability
++
+Known exploitation
++
+Internet exposure
++
+Asset criticality
++
+Production status
++
+Service exposure
++
+Privilege impact
++
+Attack-path position
++
+Remediation availability
+
+Every factor must be visible.
+
+⸻
+
+22. Risk Priority
+
+Use:
+
+CRITICAL
+HIGH
+MEDIUM
+LOW
+INFORMATIONAL
+
+But also show the underlying factors.
+
+Example:
+
+Risk Priority: CRITICAL
+CVSS:
+9.8
+Known Exploitation:
+YES
+Internet Exposure:
+YES
+Asset Criticality:
+CRITICAL
+Production:
+YES
+Public Exploit:
+YES
+Affected Service:
+HTTPS
+Remediation:
+Available
+
+⸻
+
+23. Risk Score
+
+If a numerical score is implemented, it must be:
+
+* documented
+* deterministic
+* explainable
+* configurable
+* reproducible
+
+Do not use arbitrary “AI risk scoring.”
+
+Example conceptual model:
+
+Base Severity
++ Exploitability Modifier
++ Exposure Modifier
++ Asset Criticality Modifier
++ Attack Path Modifier
+
+Document the exact calculation.
+
+Allow administrators to adjust weights.
+
+⸻
+
+24. Risk Reasoning
+
+Every prioritized vulnerability should produce human-readable reasoning.
+
+Example:
+
+Why this is high priority:
+1. The affected software is present on WEB-01.
+2. WEB-01 is classified as production.
+3. WEB-01 is internet-facing.
+4. The vulnerability has a CVSS score of 9.8.
+5. Known exploitation has been reported.
+6. A fixed version is available.
+
+This explanation is more important than the numeric score.
+
+⸻
+
+25. Attack-Path Engine
+
+Build an attack-path analysis engine.
+
+The graph can contain:
+
+Internet
+Asset
+Service
+Software
+Vulnerability
+Identity
+Network Zone
+Critical Asset
+
+Example:
+
+Internet
+   ↓
+WEB-01
+   ↓
+CVE-XXXX
+   ↓
+APP-01
+   ↓
+DB-01
+   ↓
+Sensitive Data
+
+RiskScope should identify paths where vulnerability exploitation could potentially provide progression toward a critical asset.
+
+Important:
+
+Do not claim an actual exploit path exists unless the imported data supports it.
+
+Use language such as:
+
+Potential attack path
+
+rather than:
+
+Confirmed attack path
+
+unless evidence justifies confirmation.
+
+⸻
+
+26. Attack-Path Visualization
+
+Build an interactive graph.
+
+Nodes:
+
+Internet
+Assets
+Services
+Software
+Vulnerabilities
+Critical Assets
+
+Edges:
+
+REACHES
+RUNS
+AFFECTED_BY
+CONNECTS_TO
+DEPENDS_ON
+COULD_LEAD_TO
+
+Clicking a node should reveal:
+
+* metadata
+* evidence
+* related vulnerabilities
+* related assets
+* relationships
+
+⸻
+
+27. Business Context
+
+Allow analysts to define business context.
+
+Asset fields:
+
+Business Owner
+Business Unit
+Application
+Business Function
+Data Classification
+Criticality
+Regulatory Importance
+
+Data classification:
+
+PUBLIC
+INTERNAL
+CONFIDENTIAL
+RESTRICTED
+UNKNOWN
+
+This allows RiskScope to understand that:
+
+Critical database > developer laptop
+
+even when the same vulnerability exists on both.
+
+⸻
+
+28. Remediation Model
+
+Create remediation records.
+
+Remediation
+├── Vulnerability
+├── Asset
+├── Action
+├── Fixed Version
+├── Owner
+├── Priority
+├── Due Date
+├── Status
+├── Created At
+├── Completed At
+└── Verification
+
+Statuses:
+
+OPEN
+ASSIGNED
+IN_PROGRESS
+REMEDIATED
+VERIFIED
+RISK_ACCEPTED
+FALSE_POSITIVE
+DEFERRED
+
+⸻
+
+29. Remediation Recommendations
+
+For each vulnerability show:
+
+Recommended Action
+
+Examples:
+
+Upgrade nginx to 1.26.x or later.
+Apply vendor security patch.
+Disable vulnerable service.
+Restrict network exposure.
+Remove unused software.
+Replace unsupported software.
+
+Recommendations should come from vulnerability metadata or deterministic rules.
+
+Do not invent fixed versions.
+
+⸻
+
+30. Risk Acceptance
+
+Allow organizations to accept risk.
+
+A risk acceptance record must include:
+
+Reason
+Approver
+Expiration Date
+Compensating Controls
+Created At
+
+Do not permanently hide accepted risks.
+
+They should remain visible in historical reporting.
+
+⸻
+
+31. Remediation Verification
+
+After remediation:
+
+Before:
+nginx 1.24.0
+CVE-XXXX affected
+After:
+nginx 1.26.2
+No longer affected
+
+Create a verification event.
+
+Do not automatically claim remediation merely because the analyst changed a status.
+
+Require evidence or explicit analyst verification.
+
+⸻
+
+32. Vulnerability Dashboard
+
+Create a professional dashboard.
+
+Show:
+
+Total Assets
+Total Vulnerabilities
+Critical
+High
+Medium
+Low
+Internet-Exposed Vulnerabilities
+Known Exploited Vulnerabilities
+Top Risk Assets
+Top Vulnerabilities
+Overdue Remediation
+Risk Trend
+
+⸻
+
+33. Asset Risk Dashboard
+
+For each asset:
+
+WEB-01
+Criticality:
+CRITICAL
+Exposure:
+INTERNET-FACING
+Risk:
+CRITICAL
+Vulnerabilities:
+23
+Critical:
+4
+High:
+7
+Medium:
+8
+Low:
+4
+
+Show the vulnerabilities contributing most to the asset’s risk.
+
+⸻
+
+34. Vulnerability Detail Page
+
+Create a detailed page:
+
+CVE-XXXX
+Title
+Description
+CVSS
+CWE
+Affected Versions
+Fixed Versions
+Exploitability
+Known Exploitation
+Affected Assets
+Exposure
+Attack Paths
+Risk Assessment
+Evidence
+Remediation
+Analyst Assessment
+References
+
+⸻
+
+35. Asset Detail Page
+
+Show:
+
+Asset Overview
+Network Information
+Business Context
+Installed Software
+Services
+Vulnerabilities
+Risk
+Attack Paths
+Remediation
+Evidence
+Timeline
+
+⸻
+
+36. Software Detail Page
+
+Show:
+
+Product
+Vendor
+Version
+Affected Assets
+Known Vulnerabilities
+Dependency Relationships
+Fixed Versions
+Risk Contribution
+
+⸻
+
+37. Import System
+
+Support:
+
+CSV
+
+Asset inventory:
+
+hostname,ip,os,environment,criticality,owner
+WEB-01,10.0.1.10,Linux,production,critical,Infrastructure
+
+Software inventory:
+
+hostname,product,vendor,version
+WEB-01,nginx,nginx,1.24.0
+
+JSON
+
+Support equivalent structured imports.
+
+SBOM
+
+Support CycloneDX and SPDX.
+
+⸻
+
+38. Import Validation
+
+Every import must be validated.
+
+Report:
+
+Records processed
+Records imported
+Records skipped
+Records rejected
+Warnings
+Errors
+
+Example:
+
+Import completed
+Assets:
+428 imported
+Software:
+3,214 imported
+Rejected:
+12
+Warnings:
+7
+
+Allow downloading an import error report.
+
+⸻
+
+39. Import Provenance
+
+Every imported record should know where it came from.
+
+Example:
+
+Source:
+asset_inventory_2026-10-07.csv
+Imported:
+2026-10-07 18:42
+Import ID:
+IMP-00042
+
+This provides evidence provenance.
+
+⸻
+
+40. Vulnerability Feed Architecture
+
+Create an adapter architecture.
+
+Example:
+
+VulnerabilityProvider
+├── LocalJSONProvider
+├── NVDProvider
+├── OSVProvider
+└── FutureProviders
+
+External providers must be optional.
+
+The application should be able to run entirely against local fixture data.
+
+⸻
+
+41. Caching
+
+Do not repeatedly download the same vulnerability data.
+
+Implement local caching where appropriate.
+
+Track:
+
+Source
+Last Updated
+Version
+Downloaded At
+
+⸻
+
+42. Findings and Risk Assessments
+
+Create a separate model:
+
+RiskAssessment
+
+Fields:
+
+ID
+Vulnerability
+Asset
+Risk Priority
+Score
+Factors
+Reasoning
+Status
+Analyst Override
+Analyst Reason
+Created At
+Updated At
+
+This prevents the vulnerability itself from being confused with its environmental risk.
+
+⸻
+
+43. Analyst Workflow
+
+RiskScope should support:
+
+Automated Assessment
+        ↓
+Analyst Review
+        ↓
+Confirm / Modify / Reject
+        ↓
+Prioritize
+        ↓
+Remediation
+        ↓
+Verification
+
+Analyst actions:
+
+Confirm
+Reject
+Accept Risk
+Change Priority
+Assign Owner
+Add Note
+Set Due Date
+Mark Remediated
+Verify
+
+⸻
+
+44. Evidence Model
+
+Create an evidence system.
+
+Evidence types:
+
+ASSET_INVENTORY
+SOFTWARE_INVENTORY
+SBOM
+VULNERABILITY_RECORD
+NETWORK_OBSERVATION
+SERVICE_OBSERVATION
+EXPLOIT_INTELLIGENCE
+REMEDIATION_EVIDENCE
+ANALYST_NOTE
+IMPORT_RECORD
+
+Every risk assessment should link to evidence.
+
+⸻
+
+45. Timeline
+
+Create a timeline.
+
+Events:
+
+Asset imported
+Software discovered
+Vulnerability matched
+Risk calculated
+Analyst reviewed
+Remediation assigned
+Patch applied
+Remediation verified
+Risk accepted
+
+This creates an audit trail.
+
+⸻
+
+46. Case Management
+
+Allow analysts to create cases.
+
+Example:
+
+Case:
+Critical Internet-Facing Vulnerabilities
+Assets:
+WEB-01
+WEB-02
+Findings:
+CVE-XXXX
+CVE-YYYY
+Notes:
+...
+Remediation:
+...
+
+Case statuses:
+
+OPEN
+INVESTIGATING
+REMEDIATION
+VERIFICATION
+CLOSED
+
+⸻
+
+47. Reporting
+
+Generate:
+
+Executive Report
+
+Include:
+
+Security Posture Summary
+Top Risks
+Critical Assets
+Internet Exposure
+Known Exploited Vulnerabilities
+Remediation Status
+Risk Trends
+
+Technical Report
+
+Include:
+
+Asset
+Software
+Vulnerability
+CVSS
+Exploitability
+Exposure
+Risk Factors
+Evidence
+Attack Paths
+Remediation
+Verification
+
+⸻
+
+48. Report Formats
+
+Support:
+
+PDF
+Markdown
+JSON
+CSV
+
+JSON should contain complete structured data.
+
+CSV should support:
+
+Risk Register
+Asset Inventory
+Vulnerability Inventory
+Remediation Tracker
+
+⸻
+
+49. Risk Register
+
+Create a dedicated risk register.
+
+Columns:
+
+Risk ID
+Asset
+Vulnerability
+Severity
+Priority
+Exposure
+Exploitability
+Business Criticality
+Owner
+Status
+Due Date
+
+Allow filtering and sorting.
+
+⸻
+
+50. Risk Prioritization Interface
+
+Provide a view:
+
+TOP RISKS
+1. CVE-XXXX
+   WEB-01
+   CRITICAL
+   Internet-facing
+   Known exploited
+2. CVE-YYYY
+   APP-02
+   HIGH
+   Production
+   Public exploit
+3. CVE-ZZZZ
+   DB-01
+   HIGH
+   Critical asset
+
+Users should understand immediately:
+
+Why is this vulnerability above the others?
+
+⸻
+
+51. Risk Comparison
+
+Implement a comparison feature.
+
+Example:
+
+CVE-AAAA
+CVSS: 9.8
+Internet exposed: NO
+Known exploited: NO
+Asset criticality: LOW
+CVE-BBBB
+CVSS: 8.8
+Internet exposed: YES
+Known exploited: YES
+Asset criticality: CRITICAL
+
+RiskScope should be able to explain why CVE-BBBB is prioritized first despite the lower CVSS.
+
+This is a key demonstration feature.
+
+⸻
+
+52. Risk Trend
+
+Track risk over time.
+
+Example:
+
+October 1:
+Critical: 23
+High: 81
+October 7:
+Critical: 12
+High: 64
+
+Show:
+
+* open risk
+* remediated risk
+* new vulnerabilities
+* overdue remediation
+
+Do not fabricate historical data.
+
+Use imported snapshots or application events.
+
+⸻
+
+53. Attack Surface View
+
+Provide:
+
+Internet-facing assets
+Internal assets
+Critical assets
+Vulnerable assets
+
+Allow filtering:
+
+Internet-facing
+Critical
+Known exploited
+Overdue
+
+⸻
+
+54. Dependency Risk
+
+For SBOM-backed applications, show:
+
+Application
+ ↓
+Dependency
+ ↓
+Vulnerable Package
+ ↓
+CVE
+ ↓
+Severity
+ ↓
+Remediation
+
+Also distinguish:
+
+Direct Dependency
+Transitive Dependency
+
+⸻
+
+55. Unsupported / End-of-Life Software
+
+Allow lifecycle information where available.
+
+Potential finding:
+
+Software:
+Python 3.8
+Status:
+End of Life
+Risk:
+Unsupported software may no longer receive security fixes.
+
+Do not automatically assign critical severity.
+
+Treat lifecycle status as another risk factor.
+
+⸻
+
+56. Misconfiguration Risk
+
+Allow non-CVE risks.
+
+Examples:
+
+Unsupported OS
+Internet-exposed administration service
+Unencrypted service
+Missing asset owner
+Unknown criticality
+Unsupported software
+Weak network segmentation
+
+These should use:
+
+Risk ID
+Category
+Evidence
+Severity
+Confidence
+Recommendation
+
+This makes RiskScope broader than CVE management.
+
+⸻
+
+57. Security Categories
+
+Use categories:
+
+VULNERABILITY
+SOFTWARE_LIFECYCLE
+EXPOSURE
+CONFIGURATION
+DEPENDENCY
+ASSET_RISK
+NETWORK_RISK
+IDENTITY_RISK
+
+⸻
+
+58. Frontend Pages
+
+Implement:
+
+Dashboard
+Assets
+Asset Details
+Software
+Software Details
+Vulnerabilities
+Vulnerability Details
+Risk Register
+Attack Paths
+SBOM
+Imports
+Remediation
+Cases
+Reports
+Timeline
+Settings
+
+⸻
+
+59. Main Dashboard
+
+The main dashboard should communicate security posture immediately.
+
+Example:
+
+RISKSCOPЕ
+Security Posture
+Critical Risks      12
+High Risks          47
+Internet Exposure   18
+Known Exploited      5
+Overdue             23
+Top Risk Assets
+...
+Top Vulnerabilities
+...
+Remediation Progress
+...
+Risk Trend
+...
+
+Do not make the dashboard visually overwhelming.
+
+⸻
+
+60. Graph UX
+
+The graph should allow:
+
+* zoom
+* pan
+* search
+* filtering
+* node selection
+* relationship inspection
+
+Filters:
+
+Assets
+Vulnerabilities
+Services
+Critical Assets
+Internet Exposure
+Known Exploitation
+
+Clicking an edge should explain the relationship.
+
+⸻
+
+61. Security Requirements
+
+RiskScope itself must be secure.
+
+Implement:
+
+* input validation
+* SQL injection prevention
+* safe file imports
+* upload size limits
+* path traversal prevention
+* malformed SBOM handling
+* safe JSON parsing
+* safe CSV parsing
+* no arbitrary code execution
+* no shell execution from imported data
+
+Imported SBOM/package data must never be executed.
+
+⸻
+
+62. Testing Requirements
+
+Create extensive tests.
+
+Asset tests
+
+* asset creation
+* normalization
+* duplicate handling
+* relationships
+
+Inventory tests
+
+* CSV import
+* JSON import
+* malformed data
+* duplicate software
+
+SBOM tests
+
+* CycloneDX
+* SPDX
+* invalid SBOM
+* dependency relationships
+
+Vulnerability tests
+
+* CVE matching
+* version ranges
+* affected versions
+* fixed versions
+
+Risk tests
+
+Test deterministic scenarios.
+
+Example:
+
+Scenario A:
+CVSS 9.8
+Internet exposed
+Known exploited
+Critical production asset
+Expected:
+CRITICAL
+
+Scenario B:
+
+CVSS 9.8
+Internal-only
+No known exploit
+Low-criticality lab asset
+Expected:
+Lower priority than Scenario A
+
+Scenario C:
+
+CVSS 7.5
+Internet exposed
+Known exploited
+Critical production asset
+Expected:
+Potentially higher priority than an isolated CVSS 9.8 vulnerability
+
+The tests must verify the reasoning, not merely the final number.
+
+⸻
+
+63. Attack-Path Tests
+
+Create deterministic fixture environments.
+
+Example:
+
+Internet
+ ↓
+WEB-01
+ ↓
+APP-01
+ ↓
+DB-01
+
+Add a vulnerability on WEB-01.
+
+Verify that RiskScope identifies:
+
+Potential path:
+Internet → WEB-01 → APP-01 → DB-01
+
+Then remove the relationship and verify that the path disappears.
+
+⸻
+
+64. Remediation Tests
+
+Verify:
+
+Vulnerable
+ ↓
+Remediated
+ ↓
+Verified
+
+Ensure a vulnerability cannot automatically become verified without evidence or explicit analyst verification.
+
+⸻
+
+65. Test Dataset
+
+Create realistic but synthetic data.
+
+Example organization:
+
+ExampleCorp
+
+Assets:
+
+WEB-01
+WEB-02
+APP-01
+APP-02
+DB-01
+DB-02
+DC-01
+FILE-01
+LAPTOP-01
+
+Include:
+
+* production
+* development
+* internal
+* internet-facing
+* critical systems
+* low-value systems
+
+Include synthetic vulnerability relationships.
+
+Do not include real organizational data.
+
+⸻
+
+66. Example Scenario
+
+Build a demo scenario:
+
+WEB-01
+Production
+Internet-facing
+Critical
+Software:
+nginx 1.24.0
+Vulnerability:
+CVE-XXXX
+CVSS:
+9.8
+Known exploited:
+YES
+Fixed version:
+1.26.x
+
+RiskScope should conclude:
+
+CRITICAL PRIORITY
+
+and explain:
+
+Internet exposure
++
+Production
++
+Critical asset
++
+High CVSS
++
+Known exploitation
++
+Remediation available
+
+Then:
+
+WEB-02
+Development
+Internal-only
+Low criticality
+Same vulnerability
+
+RiskScope should prioritize WEB-01 first.
+
+This is a key demonstration of the project’s value.
+
+⸻
+
+67. Optional Threat Intelligence
+
+Design optional adapters for:
+
+* NVD
+* OSV
+* CISA KEV
+* vendor advisories
+
+Do not make external access mandatory.
+
+The architecture should support:
+
+VulnerabilityProvider
+ExploitProvider
+ThreatIntelProvider
+
+Use interfaces so providers can be replaced.
+
+⸻
+
+68. CISA KEV Integration
+
+If implementing a known-exploitation source, support CISA KEV as an optional provider.
+
+Map:
+
+CVE
+Vendor
+Product
+Known Exploitation
+Due Date
+
+Do not call a vulnerability “known exploited” without a trustworthy source.
+
+Store source provenance.
+
+⸻
+
+69. References
+
+Every vulnerability record should support references.
+
+Examples:
+
+Vendor advisory
+CVE
+CWE
+OSV
+Security advisory
+Patch notes
+
+Never fabricate references.
+
+⸻
+
+70. Data Provenance
+
+Every major record should know:
+
+Source
+Source Type
+Imported At
+Last Updated
+Confidence
+
+Example:
+
+Source:
+CISA KEV
+Source Type:
+External Intelligence
+Imported:
+2026-10-07
+
+⸻
+
+71. Analyst Override
+
+Analysts can override:
+
+Severity
+Priority
+Confidence
+Exposure
+Exploitability
+
+But require a reason.
+
+Example:
+
+Automated priority:
+HIGH
+Analyst priority:
+CRITICAL
+Reason:
+Asset hosts production authentication service.
+
+Keep the automated result for audit history.
+
+⸻
+
+72. Audit Trail
+
+Every meaningful change must create an audit event.
+
+Examples:
+
+Risk priority changed
+Finding rejected
+Asset criticality changed
+Remediation assigned
+Risk accepted
+Vulnerability verified
+
+Record:
+
+Timestamp
+Action
+Object
+Previous Value
+New Value
+Reason
+
+⸻
+
+73. Performance
+
+Design for reasonable local datasets.
+
+The application should handle at least:
+
+1,000+ assets
+10,000+ software installations
+10,000+ vulnerability records
+50,000+ vulnerability relationships
+
+without obviously poor UI performance.
+
+Use pagination.
+
+Do not load the entire dataset into the browser.
+
+⸻
+
+74. API Endpoints
+
+Implement APIs similar to:
+
+POST   /api/assets
+GET    /api/assets
+GET    /api/assets/{id}
+PATCH  /api/assets/{id}
+POST   /api/imports/assets
+POST   /api/imports/software
+POST   /api/imports/sbom
+GET    /api/software
+GET    /api/software/{id}
+GET    /api/vulnerabilities
+GET    /api/vulnerabilities/{id}
+POST   /api/correlation/run
+GET    /api/risk
+GET    /api/risk/{id}
+GET    /api/assets/{id}/risk
+GET    /api/assets/{id}/attack-paths
+GET    /api/attack-paths
+POST   /api/remediation
+PATCH  /api/remediation/{id}
+POST   /api/risk/{id}/accept
+POST   /api/risk/{id}/verify
+GET    /api/dashboard
+GET    /api/timeline
+POST   /api/reports
+
+Use Pydantic schemas.
+
+Do not expose database models directly.
+
+⸻
+
+75. Database Models
+
+At minimum:
+
+Asset
+AssetRelationship
+NetworkZone
+Service
+Software
+SoftwareInstallation
+Dependency
+SBOM
+SBOMComponent
+Vulnerability
+VulnerabilityReference
+VulnerabilityMatch
+ExposureObservation
+ExploitabilityObservation
+RiskAssessment
+RiskFactor
+AttackPath
+BusinessContext
+Remediation
+RemediationVerification
+RiskAcceptance
+Evidence
+Case
+CaseRisk
+CaseAsset
+AnalystNote
+TimelineEvent
+ImportJob
+ImportRecord
+AuditEvent
+Report
+
+Use appropriate indexes and foreign keys.
+
+⸻
+
+76. Reporting Dashboard
+
+Create two major perspectives.
+
+Technical
+
+For security engineers:
+
+Vulnerability
+Affected Asset
+Software
+Version
+CVSS
+Exploitability
+Exposure
+Evidence
+Attack Path
+Remediation
+
+Executive
+
+For management:
+
+Overall Risk
+Critical Risks
+Known Exploited Risks
+Internet Exposure
+Top Business-Critical Assets
+Remediation Progress
+Overdue Risks
+Risk Trend
+
+⸻
+
+77. No Fake Security Claims
+
+Do not claim:
+
+* “100% vulnerability detection”
+* “AI-powered risk intelligence” without actual AI
+* “Complete attack-path discovery”
+* “Automatically determines exploitability”
+* “Guarantees security”
+
+Use honest wording:
+
+RiskScope provides contextual vulnerability prioritization based on imported asset, software, vulnerability, exposure, exploitability, and business-context evidence.
+
+⸻
+
+78. Non-Goals
+
+Do NOT turn RiskScope into:
+
+* a generic port scanner
+* an exploit framework
+* a penetration-testing tool
+* a malware scanner
+* a SIEM
+* a network IDS
+* a patch deployment system
+* an arbitrary command-execution platform
+* a cloud-only SaaS
+* an AI chatbot
+* a CVE search website
+
+RiskScope’s unique purpose is:
+
+Contextualizing vulnerabilities and prioritizing the risks that matter most.
+
+⸻
+
+79. Implementation Phases
+
+Implement incrementally.
+
+Phase 1 — Foundation
+
+Build:
+
+* FastAPI
+* React
+* SQLite
+* Alembic
+* models
+* migrations
+* basic dashboard
+* tests
+
+⸻
+
+Phase 2 — Asset Management
+
+Implement:
+
+* assets
+* business context
+* network zones
+* services
+* relationships
+* asset UI
+
+⸻
+
+Phase 3 — Software Inventory
+
+Implement:
+
+* software
+* installations
+* normalization
+* inventory imports
+
+⸻
+
+Phase 4 — SBOM
+
+Implement:
+
+* CycloneDX
+* SPDX
+* dependency graph
+* SBOM UI
+
+⸻
+
+Phase 5 — Vulnerability Engine
+
+Implement:
+
+* vulnerability model
+* local vulnerability data
+* CVE matching
+* affected-version logic
+* fixed-version logic
+* vulnerability UI
+
+⸻
+
+Phase 6 — Exposure + Exploitability
+
+Implement:
+
+* exposure model
+* service exposure
+* exploitability
+* known exploitation
+* evidence
+
+⸻
+
+Phase 7 — Risk Engine
+
+Implement:
+
+* risk factors
+* deterministic prioritization
+* reasoning
+* analyst overrides
+* risk comparison
+
+⸻
+
+Phase 8 — Attack Paths
+
+Implement:
+
+* relationship graph
+* path discovery
+* attack-path visualization
+* critical-asset analysis
+
+⸻
+
+Phase 9 — Remediation
+
+Implement:
+
+* remediation records
+* assignments
+* deadlines
+* risk acceptance
+* verification
+* audit trail
+
+⸻
+
+Phase 10 — Reporting
+
+Implement:
+
+* executive report
+* technical report
+* PDF
+* Markdown
+* JSON
+* CSV
+
+⸻
+
+Phase 11 — Hardening
+
+Implement:
+
+* import validation
+* performance optimization
+* pagination
+* security tests
+* malformed-input tests
+* audit logging
+* documentation
+
+⸻
+
+80. Final Acceptance Criteria
+
+Do not consider RiskScope complete until the following workflow works end-to-end:
+
+Import Assets
+      ↓
+Import Software
+      ↓
+Import SBOM
+      ↓
+Import Vulnerabilities
+      ↓
+Correlate Vulnerabilities
+      ↓
+Determine Exposure
+      ↓
+Determine Exploitability
+      ↓
+Evaluate Business Criticality
+      ↓
+Calculate Transparent Risk
+      ↓
+Explain Priority
+      ↓
+Visualize Attack Paths
+      ↓
+Create Remediation
+      ↓
+Track Remediation
+      ↓
+Verify Fix
+      ↓
+Generate Report
+
+The application must be able to demonstrate this scenario:
+
+WEB-01
+Production
+Internet-facing
+Critical asset
+nginx 1.24.0
+CVE-XXXX
+CVSS 9.8
+Known exploited
+Fixed version available
+
+and explain:
+
+WEB-01 is the highest-priority remediation because the vulnerable software is running on a critical, production, internet-facing asset and the vulnerability has known exploitation with a remediation available.
+
+Then compare it against another asset running the same vulnerable software but with:
+
+Development
+Internal-only
+Low criticality
+No known exploitation
+
+and correctly prioritize the first asset.
+
+⸻
+
+81. Final Product Standard
+
+The finished RiskScope application should feel like a real vulnerability-management investigation workstation, not a CVE browser.
+
+An analyst should be able to answer:
+
+What is vulnerable?
+
+WEB-01
+nginx 1.24.0
+CVE-XXXX
+
+Why does it matter?
+
+Internet-facing
+Production
+Critical asset
+Known exploitation
+High severity
+
+What could it affect?
+
+WEB-01
+    ↓
+APP-01
+    ↓
+DB-01
+
+What should we do?
+
+Upgrade nginx
+Restrict exposure
+Verify remediation
+
+How do we know?
+
+Asset inventory
+Software inventory
+Vulnerability record
+Exposure evidence
+Exploit intelligence
+Network relationships
+
+The defining principle of RiskScope is:
+
+A vulnerability is not automatically a risk. RiskScope determines how much the vulnerability matters in the context of the asset, exposure, exploitability, business importance, and potential attack path.

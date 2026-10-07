@@ -1,0 +1,18 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "SYNTHETIC ExampleCorp SPDX demonstration",
+  "documentNamespace": "https://example.invalid/synthetic-spdx/1",
+  "creationInfo": {"creators":["Organization: ExampleCorp synthetic"],"created":"2026-10-07T00:00:00Z"},
+  "documentDescribes": ["SPDXRef-App"],
+  "packages": [
+    {"SPDXID":"SPDXRef-App","name":"synthetic-spdx-app","versionInfo":"1.0.0","supplier":"Organization: ExampleCorp synthetic","downloadLocation":"NOASSERTION","licenseConcluded":"NOASSERTION"},
+    {"SPDXID":"SPDXRef-HTTP","name":"demo-http","versionInfo":"1.0.0","supplier":"Organization: ExampleCorp synthetic","downloadLocation":"NOASSERTION","licenseDeclared":"MIT","externalRefs":[{"referenceCategory":"PACKAGE-MANAGER","referenceType":"purl","referenceLocator":"pkg:npm/demo-http@1.0.0"}]},
+    {"SPDXID":"SPDXRef-Parser","name":"demo-parser","versionInfo":"1.0.0","supplier":"Organization: ExampleCorp synthetic","downloadLocation":"NOASSERTION","licenseDeclared":"Apache-2.0","checksums":[{"algorithm":"SHA256","checksumValue":"0000000000000000000000000000000000000000000000000000000000000000"}],"externalRefs":[{"referenceCategory":"PACKAGE-MANAGER","referenceType":"purl","referenceLocator":"pkg:npm/demo-parser@1.0.0"}]}
+  ],
+  "relationships": [
+    {"spdxElementId":"SPDXRef-App","relationshipType":"DEPENDS_ON","relatedSpdxElement":"SPDXRef-HTTP"},
+    {"spdxElementId":"SPDXRef-HTTP","relationshipType":"DEPENDS_ON","relatedSpdxElement":"SPDXRef-Parser"}
+  ]
+}

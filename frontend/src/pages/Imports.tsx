@@ -1,0 +1,60 @@
+import { useRef, useState, type FormEvent } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useApiAction, useResource } from '../lib/api'
+import { humanize, number, text } from '../lib/format'
+import { Lookup } from '../components/Lookup'
+import { ResourceTable } from '../components/ResourceTable'
+import { DemoButton } from '../components/WorkstationActions'
+import { ErrorNotice, Facts, PageHeader, Pill, Section, Skeleton, useNotice } from '../components/UI'
+import type { Data } from '../types'
+
+const examples: Record<string, string> = {
+  assets: 'hostname,ip,os,environment,criticality,owner\nWEB-01,10.0.1.10,Linux,PRODUCTION,CRITICAL,Infrastructure',
+  software: 'hostname,product,vendor,version\nWEB-01,ExampleWeb,ExampleCorp,1.0.0',
+  relationships: 'source_asset_id,target_asset_id,type\n1,2,CONNECTS_TO',
+  vulnerabilities: '[{"identifier":"EXAMPLE-ADVISORY-001","title":"Synthetic advisory","synthetic":true,"cvss_score":7.5,"source":"Local fixture"}]',
+  sbom: '{"bomFormat":"CycloneDX","specVersion":"1.5","version":1,"components":[{"type":"library","bom-ref":"example-lib","name":"example-lib","version":"1.0.0"}]}',
+}
+
+function ImportResult({ job }: { job: Data }) {
+  return <div className="import-result"><div className="section-heading"><h3>{text(job.filename)} <Pill value={job.status} /></h3><Link className="text-link" to={`/imports/${job.id}`}>Inspect import #{job.id} →</Link></div><dl className="import-counts">{['processed', 'imported', 'skipped', 'rejected'].map(key => <div key={key}><dt>{humanize(key)}</dt><dd>{number(job[key])}</dd></div>)}</dl>{Array.isArray(job.warnings) && job.warnings.length > 0 && <div className="notice warning"><h4>Import warnings</h4><ul>{job.warnings.map((warning, i) => <li key={i}>{text(warning)}</li>)}</ul></div>}<a className="button small" href={`/api/imports/${job.id}/errors.csv`} download>Download row error report (CSV)</a></div>
+}
+
+export function Imports() {
+  const [kind, setKind] = useState('assets')
+  const [assetId, setAssetId] = useState<number | null>(null)
+  const [file, setFile] = useState<File | null>(null)
+  const [job, setJob] = useState<Data | null>(null)
+  const [error, setError] = useState<Error | null>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
+  const upload = useApiAction(`/imports/${kind}`)
+  const notice = useNotice()
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    setError(null)
+    if (!file) return setError(new Error('Choose a CSV, JSON or SBOM file to import.'))
+    if (file.size > 10 * 1024 * 1024) return setError(new Error('This file exceeds the 10 MiB upload limit. Split the inventory into smaller files and try again.'))
+    if (kind === 'sbom' && !assetId) return setError(new Error('Choose the asset that owns this SBOM.'))
+    const data = new FormData()
+    data.append('file', file)
+    if (assetId && kind === 'sbom') data.append('asset_id', String(assetId))
+    try {
+      const result = await upload.mutateAsync(data)
+      setJob(result)
+      setFile(null)
+      if (fileInput.current) fileInput.current.value = ''
+      notice('Import processed. Review imported, skipped and rejected rows before correlating.')
+    } catch (e) { setError(e instanceof Error ? e : new Error('Import failed.')) }
+  }
+  return <><PageHeader title="Imports" description="Bring evidence into the local workstation. Files are parsed and validated, never executed." /><div className="import-layout"><Section title="Import local evidence" description="Create assets first, then add their software and SBOMs. Add advisory evidence before running correlation."><form onSubmit={submit} className="import-form"><label htmlFor="import-kind">Record type</label><select id="import-kind" value={kind} disabled={upload.isPending} onChange={event => { setKind(event.target.value); setError(null) }}>{['assets', 'software', 'vulnerabilities', 'sbom', 'relationships'].map(value => <option key={value} value={value}>{value === 'sbom' ? 'SBOM · CycloneDX / SPDX' : humanize(value)}</option>)}</select>{kind === 'sbom' && <Lookup resource="assets" label="Owning asset" value={assetId} onChange={setAssetId} required disabled={upload.isPending} />}<label htmlFor="import-file">Local file *</label><input id="import-file" type="file" ref={fileInput} accept={kind === 'sbom' ? '.json,.xml' : kind === 'vulnerabilities' ? '.json' : '.csv,.json'} required disabled={upload.isPending} onChange={event => setFile(event.target.files?.[0] || null)} /><p className="field-help">{kind === 'sbom' ? 'CycloneDX JSON/XML and SPDX JSON. Package scripts are never executed.' : kind === 'vulnerabilities' ? 'JSON advisory snapshots. Include affected ranges and known fixes when supported by source evidence.' : 'CSV or JSON with one record per row or array item. Existing records are normalized and duplicate handling is reported.'} Maximum upload size: 10 MiB.</p><ErrorNotice error={error} /><button className="button primary" disabled={upload.isPending}>{upload.isPending ? 'Validating & importing…' : 'Validate & import file'}</button></form>{job && <ImportResult job={job} />}</Section><aside><Section title="File format guide"><p>Use documented field names and explicit source information. Unknown values remain unknown; IP addresses do not imply exposure.</p><details className="details-block" open><summary>{humanize(kind)} example</summary><pre className="example-code">{examples[kind]}</pre></details><p className="field-help">Expanded examples and supported fields are included in the repository’s <code>fixtures/</code> and <code>docs/import-formats.md</code>.</p><div className="import-order"><h3>Recommended order</h3><ol><li>Assets and business context</li><li>Software inventory and SBOMs</li><li>Vulnerability feed snapshots</li><li>Network relationships and observations</li><li>Correlate and inspect resulting risks</li></ol></div></Section><Section title="Explore a synthetic environment"><p>Load ExampleCorp to follow a complete investigation without supplying your own inventory. All example advisories are labeled synthetic.</p><DemoButton /></Section></aside></div><ResourceTable resource="imports" title="Import history" /></>
+}
+
+export function ImportDetail() {
+  const { id } = useParams()
+  const query = useResource('imports', id)
+  const navigate = useNavigate()
+  if (query.isLoading) return <Skeleton />
+  if (query.error) return <ErrorNotice error={query.error} retry={() => { void query.refetch() }} />
+  if (!query.data) return null
+  return <><PageHeader title={text(query.data.filename)} description={`Import #${id} · Every imported or rejected row is retained for provenance.`} back={{ to: '/imports', label: 'Imports' }} actions={<button className="button" onClick={() => navigate('/risk')}>Inspect resulting risks</button>} /><Section title="Validation outcome"><ImportResult job={query.data} /><Facts data={query.data} fields={['kind', 'created_at', 'digest']} /></Section><ResourceTable resource="import-records" filters={{ import_job_id: id }} title="Row-level validation" /><ResourceTable resource="evidence" filters={{ import_job_id: id }} title="Evidence generated by this import" /></>
+}
